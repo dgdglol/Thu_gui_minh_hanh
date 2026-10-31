@@ -1,4 +1,4 @@
-# Thư Gửi Minh Hạnh 💌
+# Thư Gửi Minh Hạnh
 
 Trang web giao diện vintage giấy viết thư ấm áp (Warm Sepia / Reading Mode), hỗ trợ đọc thư, viết/cập nhật thư trực tiếp trên link web, cùng Bot Chibi tâm sự ở góc dưới màn hình.
 
