@@ -14,8 +14,8 @@
 (function initThuGuiMinhHanh() {
   "use strict";
 
-  const STORAGE_KEY = "thu_gui_minh_hanh_data_v1";
-  const CLOUD_LETTER_TOPIC = "thu_gui_minh_hanh_letter_cloud_vd2003071";
+  const STORAGE_KEY = "thu_gui_minh_hanh_data_v2";
+  const CLOUD_LETTER_TOPIC = "thu_gui_minh_hanh_letter_cloud_vd2003071_v2";
 
   // --------------------------------------------------------------------------
   // 1. CẤU HÌNH CON BOT ĐỒNG HÀNH (Đúng 4 câu theo yêu cầu)
