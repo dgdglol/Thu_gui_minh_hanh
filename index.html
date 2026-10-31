@@ -1054,6 +1054,127 @@ body[data-theme="night-warm"] .email-feedback-box.success {
 }
 
 /* ==========================================================================
+   BẢNG QUẢN LÝ & VIẾT THƯ TRÊN LINK DÀNH CHO VŨ DŨNG (Ẩn mặc định với Minh Hạnh)
+   Mở bằng link ?viet=1 hoặc ?hopthu=1 hoặc bấm 3 lần vào con tem góc phải thư
+   ========================================================================== */
+.author-admin-panel {
+  max-width: 820px;
+  margin: 1.25rem auto 0;
+  padding: 0 1.25rem;
+  font-family: var(--font-ui);
+  display: none;
+}
+
+body:not(.read-only-mode) .author-admin-panel,
+body.show-admin-panel .author-admin-panel {
+  display: block;
+}
+
+.author-card {
+  background: var(--paper-elevated);
+  border: 1.5px dashed var(--sepia-gold);
+  border-radius: 14px;
+  padding: 1.15rem 1.35rem;
+  box-shadow: 0 6px 20px rgba(59, 42, 31, 0.07);
+}
+
+.author-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.author-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--sepia-accent);
+}
+
+.author-help-text {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  line-height: 1.55;
+  margin-bottom: 0.9rem;
+}
+
+.author-actions-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.author-toast {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.95rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  background: rgba(74, 124, 89, 0.14);
+  border: 1px solid rgba(74, 124, 89, 0.35);
+  color: #2E5A3B;
+  display: none;
+}
+
+.author-inbox-box {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border-soft);
+}
+
+.author-inbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.author-inbox-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.author-inbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.inbox-msg-item {
+  background: var(--paper-bg);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.84rem;
+}
+
+.inbox-msg-meta {
+  font-size: 0.74rem;
+  color: var(--ink-muted);
+  margin-bottom: 0.25rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.inbox-msg-body {
+  color: var(--ink-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+
+/* ==========================================================================
    RESPONSIVE CHO ĐIỆN THOẠI & TABLET
    ========================================================================== */
 @media (max-width: 768px) {
@@ -1118,6 +1239,56 @@ body[data-theme="night-warm"] .email-feedback-box.success {
   </header>
 
   <!-- ========================================================================
+       BẢNG QUẢN LÝ & VIẾT THƯ TRÊN LINK (Chỉ hiện khi Vũ Dũng mở ?viet=1 hoặc ?hopthu=1)
+       Hoàn toàn ẩn khi Minh Hạnh mở link bình thường
+       ======================================================================== -->
+  <section class="author-admin-panel" id="authorAdminPanel" aria-label="Bảng viết thư và nhận thông báo">
+    <div class="author-card">
+      <div class="author-card-header">
+        <div class="author-card-title">
+          <span class="status-pill" id="saveStatusBadge">✍️ Chế độ Viết Thư & Quản Lý (Dành riêng cho Vũ Dũng)</span>
+        </div>
+        <button type="button" class="btn-action" id="btnLockView" title="Ẩn thanh công cụ để xem đúng giao diện Minh Hạnh nhìn thấy">
+          👁️ Xem như Minh Hạnh
+        </button>
+      </div>
+
+      <p class="author-help-text" id="letterStatsText">
+        Bạn có thể bấm trực tiếp vào tiêu đề hoặc nội dung bức thư bên dưới để viết/chỉnh sửa ngay trên link này, sau đó bấm <strong>"Lưu Thư Lên Link & Copy Link"</strong> để cập nhật cho Minh Hạnh.
+      </p>
+
+      <div class="author-actions-row">
+        <button type="button" class="btn-action primary" id="btnSaveCloudLetter">
+          💾 Lưu Thư Lên Link &amp; Copy Link Gửi Minh Hạnh
+        </button>
+        <button type="button" class="btn-action" id="btnEnablePushNotify">
+          🔔 Bật Chuông Thông Báo Trực Tiếp
+        </button>
+        <button type="button" class="btn-action" id="btnTestEmailAlert">
+          📧 Gửi Thử Thông Báo Về Email (vudung2003071@gmail.com)
+        </button>
+      </div>
+
+      <div class="author-toast" id="authorToast"></div>
+
+      <!-- Hộp thư hiển thị ngay mọi lời nhắn Minh Hạnh gửi trên web -->
+      <div class="author-inbox-box">
+        <div class="author-inbox-header">
+          <span class="author-inbox-title">📬 Hộp thư lời nhắn Minh Hạnh đã gửi trên link này:</span>
+          <button type="button" class="btn-action" id="btnRefreshInbox" style="padding: 0.25rem 0.65rem; font-size: 0.75rem;">
+            🔄 Làm mới
+          </button>
+        </div>
+        <div class="author-inbox-list" id="authorInboxList">
+          <div class="inbox-msg-item">
+            <div class="inbox-msg-meta">Đang kiểm tra hộp thư...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================
        TRANG GIẤY ĐỌC THƯ CHÍNH (Đã khóa chỉnh sửa, cố định Kem ấm & Font Lora)
        ======================================================================== -->
   <main class="main-wrapper">
@@ -1134,7 +1305,7 @@ body[data-theme="night-warm"] .email-feedback-box.success {
           </div>
         </div>
 
-        <div class="vintage-stamp-box" aria-hidden="true">
+        <div class="vintage-stamp-box" id="vintageStampBox" aria-hidden="true">
           <div class="postmark-circle">
             <span>THƯ TAY</span>
             <span>✦ 2026 ✦</span>

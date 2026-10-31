@@ -1040,6 +1040,127 @@ body[data-theme="night-warm"] .email-feedback-box.success {
 }
 
 /* ==========================================================================
+   BẢNG QUẢN LÝ & VIẾT THƯ TRÊN LINK DÀNH CHO VŨ DŨNG (Ẩn mặc định với Minh Hạnh)
+   Mở bằng link ?viet=1 hoặc ?hopthu=1 hoặc bấm 3 lần vào con tem góc phải thư
+   ========================================================================== */
+.author-admin-panel {
+  max-width: 820px;
+  margin: 1.25rem auto 0;
+  padding: 0 1.25rem;
+  font-family: var(--font-ui);
+  display: none;
+}
+
+body:not(.read-only-mode) .author-admin-panel,
+body.show-admin-panel .author-admin-panel {
+  display: block;
+}
+
+.author-card {
+  background: var(--paper-elevated);
+  border: 1.5px dashed var(--sepia-gold);
+  border-radius: 14px;
+  padding: 1.15rem 1.35rem;
+  box-shadow: 0 6px 20px rgba(59, 42, 31, 0.07);
+}
+
+.author-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.author-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--sepia-accent);
+}
+
+.author-help-text {
+  font-size: 0.82rem;
+  color: var(--ink-secondary);
+  line-height: 1.55;
+  margin-bottom: 0.9rem;
+}
+
+.author-actions-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.author-toast {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.95rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  background: rgba(74, 124, 89, 0.14);
+  border: 1px solid rgba(74, 124, 89, 0.35);
+  color: #2E5A3B;
+  display: none;
+}
+
+.author-inbox-box {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border-soft);
+}
+
+.author-inbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.author-inbox-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.author-inbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.inbox-msg-item {
+  background: var(--paper-bg);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.84rem;
+}
+
+.inbox-msg-meta {
+  font-size: 0.74rem;
+  color: var(--ink-muted);
+  margin-bottom: 0.25rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.inbox-msg-body {
+  color: var(--ink-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+
+/* ==========================================================================
    RESPONSIVE CHO ĐIỆN THOẠI & TABLET
    ========================================================================== */
 @media (max-width: 768px) {

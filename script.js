@@ -1,14 +1,18 @@
 /**
  * ============================================================================
- * THƯ GỬI MINH HẠNH — Interactive Logic
- * 1. Trải nghiệm đọc & viết thư (Đổi màu giấy, font chữ, cỡ chữ, dòng kẻ, lưu tự động)
- * 2. Xuất trang web hoàn chỉnh (1 file HTML duy nhất) để gửi cho Minh Hạnh
- * 3. Con Bot đồng hành:
+ * THƯ GỬI MINH HẠNH — Interactive Logic (GitHub Pages Live Edition)
+ * 1. Đọc & Viết thư trực tiếp trên link GitHub (Lưu đồng bộ Cloud + URL)
+ *    - Mặc định khi Minh Hạnh mở link: Giao diện đọc thư sạch sẽ, khóa chỉnh sửa.
+ *    - Khi Vũ Dũng mở link thêm ?viet=1 (hoặc bấm 3 lần vào con tem góc phải):
+ *      Mở chế độ viết/sửa thư trực tiếp trên link & xem hộp thư lời nhắn.
+ * 2. Con Bot đồng hành:
  *    - 2 phút đầu (120s) vào web: Không nói gì
  *    - Sau đó: Random 1 trong 4 câu -> Hiện 30s -> Ẩn 15s -> Random câu tiếp theo
- * 4. Khung hồi âm:
+ * 3. Khung hồi âm cuối thư:
  *    - Con trỏ gõ chữ đến đâu -> Avatar của con Bot hiện ra và đi theo đến đó
- *    - Gửi nội dung hồi âm về email: vudung2003071@gmail.com
+ *    - Khi Minh Hạnh bấm Gửi -> Gửi thông báo & tin nhắn về:
+ *      + Email: vudung2003071@gmail.com (qua FormSubmit AJAX)
+ *      + Kênh thông báo tức thì & hộp thư lưu trữ dự phòng (ntfy Cloud)
  * ============================================================================
  */
 
@@ -17,7 +21,8 @@
 
   const TARGET_EMAIL = "vudung2003071@gmail.com";
   const STORAGE_KEY = "thu_gui_minh_hanh_data_v1";
-  const PREFS_KEY = "thu_gui_minh_hanh_prefs_v1";
+  const CLOUD_MSG_TOPIC = "thu_gui_minh_hanh_msg_vudung2003071";
+  const CLOUD_LETTER_TOPIC = "thu_gui_minh_hanh_letter_cloud_vd2003071";
 
   // --------------------------------------------------------------------------
   // 1. CẤU HÌNH CON BOT ĐỒNG HÀNH (Đúng 4 câu theo yêu cầu)
@@ -43,9 +48,6 @@
   let visibleTimer = null;
   let hiddenTimer = null;
 
-  /**
-   * Chọn ngẫu nhiên 1 câu trong 4 câu (tránh lặp lại ngay câu vừa hiện)
-   */
   function pickRandomBotMessage() {
     if (BOT_MESSAGES.length <= 1) return BOT_MESSAGES[0];
     let idx;
@@ -56,9 +58,6 @@
     return BOT_MESSAGES[idx];
   }
 
-  /**
-   * Hiển thị tin nhắn của Bot trong 30 giây, sau đó ẩn 15 giây rồi lặp lại
-   */
   function showNextBotMessage() {
     clearTimeout(initialDelayTimer);
     clearTimeout(visibleTimer);
@@ -68,7 +67,6 @@
 
     const message = pickRandomBotMessage();
 
-    // Reset hiệu ứng xuất hiện & thanh đếm ngược 30s
     botBubble.classList.remove("visible");
     if (botTimerFill) {
       botTimerFill.style.animation = "none";
@@ -83,21 +81,16 @@
     botBubble.classList.add("visible");
     botDock.classList.add("speaking");
 
-    // Sau 30 giây -> Ẩn tin nhắn đi
     visibleTimer = setTimeout(() => {
       botBubble.classList.remove("visible");
       botDock.classList.remove("speaking");
 
-      // Ẩn trong 15 giây -> Lại bật ngẫu nhiên câu tiếp theo
       hiddenTimer = setTimeout(() => {
         showNextBotMessage();
       }, MESSAGE_HIDDEN_MS);
     }, MESSAGE_VISIBLE_MS);
   }
 
-  /**
-   * Khởi động lịch trình của Bot: Đợi đúng 2 phút đầu mới bắt đầu nói
-   */
   function initCompanionBot() {
     clearTimeout(initialDelayTimer);
     initialDelayTimer = setTimeout(() => {
@@ -105,17 +98,8 @@
     }, INITIAL_SILENT_DELAY_MS);
   }
 
-  // Cho phép bấm trực tiếp vào Avatar Bot ở góc phải dưới để hiện tin nhắn ngay lập tức
   if (botDock) {
     botDock.addEventListener("click", () => {
-      showNextBotMessage();
-    });
-  }
-
-  // Nút xem thử Bot ngay dành cho người viết thư kiểm tra hiệu ứng
-  const btnPreviewBotNow = document.getElementById("btnPreviewBotNow");
-  if (btnPreviewBotNow) {
-    btnPreviewBotNow.addEventListener("click", () => {
       showNextBotMessage();
     });
   }
@@ -128,14 +112,9 @@
   const caretBotAvatar = document.getElementById("caretBotAvatar");
   let typingPulseTimeout = null;
 
-  /**
-   * Tính toán chính xác vị trí (X, Y) của con trỏ văn bản trong textarea
-   * và di chuyển Avatar của Bot đến đúng vị trí con trỏ đó.
-   */
   function updateCaretBotPosition(isTypingEvent = false) {
     if (!replyTextarea || !caretMirror || !caretBotAvatar) return;
 
-    // Đồng bộ chiều rộng thực tế của textarea sang mirror div
     const computed = window.getComputedStyle(replyTextarea);
     caretMirror.style.width = replyTextarea.clientWidth + "px";
     caretMirror.style.fontFamily = computed.fontFamily;
@@ -146,17 +125,14 @@
     const selectionEnd = replyTextarea.selectionEnd || 0;
     const textBeforeCaret = replyTextarea.value.substring(0, selectionEnd);
 
-    // Gán nội dung trước con trỏ vào mirror div và đặt thẻ đánh dấu vị trí con trỏ
     caretMirror.textContent = textBeforeCaret;
     const caretMarker = document.createElement("span");
-    caretMarker.textContent = "\u200b"; // Zero-width space tại đúng điểm con trỏ
+    caretMarker.textContent = "\u200b";
     caretMirror.appendChild(caretMarker);
 
-    // Lấy tọa độ tương đối của con trỏ so với khung textarea
     const rawLeft = caretMarker.offsetLeft;
     const rawTop = caretMarker.offsetTop - replyTextarea.scrollTop;
 
-    // Giới hạn tọa độ để Avatar luôn nằm gọn đẹp trong khung nhìn của ô nhập
     const maxLeft = Math.max(24, replyTextarea.clientWidth - 46);
     const maxTop = Math.max(18, replyTextarea.clientHeight - 24);
 
@@ -178,9 +154,8 @@
 
   if (replyTextarea) {
     ["input", "keyup", "click", "select"].forEach((evtName) => {
-      replyTextarea.addEventListener(evtName, (e) => {
+      replyTextarea.addEventListener(evtName, () => {
         updateCaretBotPosition(evtName === "input");
-        updateMailtoFallbackLink();
       });
     });
 
@@ -195,7 +170,6 @@
     });
 
     replyTextarea.addEventListener("blur", () => {
-      // Giữ nhẹ avatar hoặc ẩn đi mượt mà khi rời khỏi ô gõ
       caretBotAvatar.classList.remove("typing-pulse");
       if (!replyTextarea.value.trim()) {
         caretBotAvatar.classList.remove("active");
@@ -210,17 +184,14 @@
   }
 
   // --------------------------------------------------------------------------
-  // 3. GỬI LỜI NHẮN VỀ EMAIL (vudung2003071@gmail.com)
+  // 3. GỬI THÔNG BÁO TIN NHẮN & EMAIL VỀ vudung2003071@gmail.com
   // --------------------------------------------------------------------------
   const replyForm = document.getElementById("replyForm");
   const senderNameInput = document.getElementById("senderNameInput");
   const btnSendReply = document.getElementById("btnSendReply");
-  const btnMailtoDirect = document.getElementById("btnMailtoDirect");
   const emailFeedbackBox = document.getElementById("emailFeedbackBox");
 
-  function buildMailtoUrl() {
-    const sender = (senderNameInput && senderNameInput.value.trim()) || "Minh Hạnh";
-    const message = (replyTextarea && replyTextarea.value.trim()) || "";
+  function buildMailtoUrl(sender, message) {
     const subject = encodeURIComponent(`💌 Hồi âm từ ${sender} (Web Thư Gửi Minh Hạnh)`);
     const body = encodeURIComponent(
       `Người gửi: ${sender}\nThời gian: ${new Date().toLocaleString("vi-VN")}\n\nLời nhắn:\n${message}`
@@ -228,87 +199,112 @@
     return `mailto:${TARGET_EMAIL}?subject=${subject}&body=${body}`;
   }
 
-  function updateMailtoFallbackLink() {
-    if (btnMailtoDirect) {
-      btnMailtoDirect.href = buildMailtoUrl();
-    }
-  }
+  /**
+   * Gửi đồng thời qua:
+   * 1) FormSubmit AJAX -> Gửi thẳng email thông báo về vudung2003071@gmail.com
+   * 2) Kênh thông báo realtime ntfy -> Báo chuông tức thì & lưu hộp thư dự phòng
+   */
+  async function sendNotificationAndEmail(sender, message) {
+    const nowStr = new Date().toLocaleString("vi-VN");
+    const pageUrl = window.location.origin + window.location.pathname;
 
-  if (senderNameInput) {
-    senderNameInput.addEventListener("input", updateMailtoFallbackLink);
+    // 1. Gửi thông báo tức thì & lưu dự phòng lên Cloud
+    const cloudPromise = fetch(`https://ntfy.sh/${CLOUD_MSG_TOPIC}`, {
+      method: "POST",
+      headers: {
+        "Title": "Thong bao: Minh Hanh vua gui tin nhan moi!",
+        "Priority": "high",
+        "Tags": "love_letter,bell"
+      },
+      body: JSON.stringify({
+        type: "reply_message",
+        sender: sender,
+        message: message,
+        time: nowStr,
+        timestamp: Date.now()
+      })
+    }).then((r) => r.ok).catch(() => false);
+
+    // 2. Gửi về Email vudung2003071@gmail.com qua FormSubmit
+    const emailPromise = fetch(`https://formsubmit.co/ajax/${TARGET_EMAIL}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({
+        _subject: `🔔 Thông báo: ${sender} vừa gửi tin nhắn mới trên Web Thư! 💌`,
+        _captcha: "false",
+        _template: "table",
+        Thong_Bao: `${sender} vừa viết lời nhắn cho bạn trên trang Thư Gửi Minh Hạnh`,
+        Nguoi_Gui: sender,
+        Noi_Dung_Tin_Nhan: message,
+        Thoi_Gian_Gui: nowStr,
+        Link_Web: pageUrl
+      })
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        return {
+          ok: res.ok && (data.success === "true" || data.success === true),
+          message: data.message || ""
+        };
+      })
+      .catch(() => ({ ok: false, message: "" }));
+
+    const [cloudOk, emailResult] = await Promise.all([cloudPromise, emailPromise]);
+    return {
+      cloudOk,
+      emailOk: emailResult.ok,
+      emailMessage: emailResult.message
+    };
   }
-  updateMailtoFallbackLink();
 
   if (replyForm) {
     replyForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const message = replyTextarea.value.trim();
+      const message = replyTextarea ? replyTextarea.value.trim() : "";
       const sender = (senderNameInput && senderNameInput.value.trim()) || "Minh Hạnh";
 
       if (!message) {
         emailFeedbackBox.className = "email-feedback-box info";
+        emailFeedbackBox.style.display = "block";
         emailFeedbackBox.textContent = "Bạn hãy viết vài lời vào ô bên trên trước khi gửi nha ✨";
-        replyTextarea.focus();
+        if (replyTextarea) replyTextarea.focus();
         return;
       }
 
       const originalBtnHTML = btnSendReply.innerHTML;
       btnSendReply.disabled = true;
-      btnSendReply.innerHTML = "<span>Đang gói thư gửi đi...</span>";
+      btnSendReply.innerHTML = "<span>Đang gửi tin nhắn...</span>";
       emailFeedbackBox.style.display = "none";
 
       try {
-        const response = await fetch(`https://formsubmit.co/ajax/${TARGET_EMAIL}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json"
-          },
-          body: JSON.stringify({
-            _subject: `💌 Lời nhắn mới từ ${sender} (Web Thư Gửi Minh Hạnh)`,
-            Nguoi_Gui: sender,
-            Loi_Nhan: message,
-            Thoi_Gian: new Date().toLocaleString("vi-VN"),
-            _template: "table"
-          })
-        });
+        const { cloudOk, emailOk } = await sendNotificationAndEmail(sender, message);
 
-        const result = await response.json().catch(() => ({}));
-
-        if (response.ok && (result.success === "true" || result.success === true)) {
+        if (emailOk || cloudOk) {
           emailFeedbackBox.className = "email-feedback-box success";
+          emailFeedbackBox.style.display = "block";
           emailFeedbackBox.innerHTML =
             `<strong>Đã gửi lời nhắn thành công! 💌</strong><br>` +
-            `Lời nhắn của bạn đã được chuyển về hộp thư <strong>${TARGET_EMAIL}</strong>. Cảm ơn bạn thật nhiều nha!`;
+            `Thông báo và nội dung tin nhắn của bạn đã được chuyển về hộp thư <strong>${TARGET_EMAIL}</strong>. Cảm ơn bạn thật nhiều nha!`;
           replyTextarea.value = "";
-          caretBotAvatar.classList.remove("active");
-          updateMailtoFallbackLink();
+          if (caretBotAvatar) caretBotAvatar.classList.remove("active");
+          loadAuthorInbox();
         } else {
-          // Trường hợp lần đầu cần kích hoạt FormSubmit hoặc mở trực tiếp trình gửi mail
           const gmailComposeUrl =
             `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(TARGET_EMAIL)}` +
             `&su=${encodeURIComponent(`💌 Hồi âm từ ${sender}`)}` +
             `&body=${encodeURIComponent(message)}`;
 
           emailFeedbackBox.className = "email-feedback-box info";
+          emailFeedbackBox.style.display = "block";
           emailFeedbackBox.innerHTML =
-            `Đã chuẩn bị sẵn bức thư hồi âm tới <strong>${TARGET_EMAIL}</strong>! ` +
-            `(Nếu đây là lần đầu gửi trên web, chủ hộp thư có thể cần bấm xác nhận kích hoạt trong Gmail, hoặc bạn có thể bấm: ` +
-            `<a href="${gmailComposeUrl}" target="_blank" rel="noopener" style="color:inherit;font-weight:600;text-decoration:underline;">Gửi ngay qua Gmail</a> ` +
-            `hoặc <a href="${buildMailtoUrl()}" style="color:inherit;font-weight:600;text-decoration:underline;">Mở ứng dụng Mail</a>).`;
+            `Bạn có thể bấm vào đây để gửi trực tiếp tới <strong>${TARGET_EMAIL}</strong>: ` +
+            `<a href="${gmailComposeUrl}" target="_blank" rel="noopener" style="color:inherit;font-weight:600;text-decoration:underline;">Gửi qua Gmail</a> ` +
+            `hoặc <a href="${buildMailtoUrl(sender, message)}" style="color:inherit;font-weight:600;text-decoration:underline;">Mở ứng dụng Mail</a>.`;
         }
-      } catch (err) {
-        const gmailComposeUrl =
-          `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(TARGET_EMAIL)}` +
-          `&su=${encodeURIComponent(`💌 Hồi âm từ ${sender}`)}` +
-          `&body=${encodeURIComponent(message)}`;
-
-        emailFeedbackBox.className = "email-feedback-box info";
-        emailFeedbackBox.innerHTML =
-          `Bạn có thể gửi trực tiếp lời nhắn này tới <strong>${TARGET_EMAIL}</strong> bằng 1 cú nhấp: ` +
-          `<a href="${gmailComposeUrl}" target="_blank" rel="noopener" style="color:inherit;font-weight:600;text-decoration:underline;">Gửi qua Gmail Web</a> ` +
-          `hoặc <a href="${buildMailtoUrl()}" style="color:inherit;font-weight:600;text-decoration:underline;">Mở ứng dụng Email</a>.`;
       } finally {
         btnSendReply.disabled = false;
         btnSendReply.innerHTML = originalBtnHTML;
@@ -317,7 +313,7 @@
   }
 
   // --------------------------------------------------------------------------
-  // 4. LƯU TỰ ĐỘNG NỘI DUNG THƯ & CHẾ ĐỘ VIẾT / ĐỌC THƯ
+  // 4. VIẾT / CHỈNH SỬA THƯ TRỰC TIẾP TRÊN LINK & ĐỒNG BỘ CHO MINH HẠNH
   // --------------------------------------------------------------------------
   const editableIds = [
     "letterTitle",
@@ -329,23 +325,22 @@
     "letterSignature"
   ];
 
-  const saveStatusBadge = document.getElementById("saveStatusBadge");
-  const letterStatsText = document.getElementById("letterStatsText");
-  const btnToggleMode = document.getElementById("btnToggleMode");
-  const btnClearLetter = document.getElementById("btnClearLetter");
-  const btnExportLetter = document.getElementById("btnExportLetter");
+  const authorToast = document.getElementById("authorToast");
+  const btnLockView = document.getElementById("btnLockView");
+  const btnSaveCloudLetter = document.getElementById("btnSaveCloudLetter");
+  const btnEnablePushNotify = document.getElementById("btnEnablePushNotify");
+  const btnTestEmailAlert = document.getElementById("btnTestEmailAlert");
+  const btnRefreshInbox = document.getElementById("btnRefreshInbox");
+  const authorInboxList = document.getElementById("authorInboxList");
+  const vintageStampBox = document.getElementById("vintageStampBox");
 
-  function updateWordCount() {
-    const bodyEl = document.getElementById("letterBody");
-    if (!bodyEl || !letterStatsText) return;
-    const text = (bodyEl.innerText || "").trim();
-    const words = text ? text.split(/\s+/).length : 0;
-    const readMin = Math.max(1, Math.ceil(words / 180));
-    letterStatsText.textContent = `Độ dài: ${words} từ (~${readMin} phút đọc) • Bấm trực tiếp vào trang giấy để chỉnh sửa nội dung thư.`;
+  function showToast(htmlMsg) {
+    if (!authorToast) return;
+    authorToast.innerHTML = htmlMsg;
+    authorToast.style.display = "block";
   }
 
-  function saveLetterToStorage() {
-    if (document.body.classList.contains("locked-export")) return;
+  function getCurrentLetterData() {
     const data = {};
     editableIds.forEach((id) => {
       const el = document.getElementById(id);
@@ -353,213 +348,350 @@
         data[id] = el.innerHTML;
       }
     });
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      if (saveStatusBadge) {
-        saveStatusBadge.textContent = "✓ Đã tự động lưu";
-      }
-    } catch (e) {
-      // Ignore storage quota errors
-    }
-    updateWordCount();
+    return data;
   }
 
-  function loadLetterFromStorage() {
-    if (document.body.classList.contains("locked-export")) return;
+  function applyLetterData(data) {
+    if (!data || typeof data !== "object") return;
+    editableIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el && typeof data[id] === "string" && data[id].trim() !== "") {
+        el.innerHTML = data[id];
+      }
+    });
+  }
+
+  function encodeLetterToBase64(data) {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        updateWordCount();
+      const jsonStr = JSON.stringify(data);
+      return btoa(encodeURIComponent(jsonStr));
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function decodeLetterFromBase64(b64) {
+    try {
+      const jsonStr = decodeURIComponent(atob(b64));
+      return JSON.parse(jsonStr);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * Tự động tải nội dung thư mới nhất Vũ Dũng đã viết trên link:
+   * Ưu tiên 1: Tham số ?thu=... trên link (nếu có)
+   * Ưu tiên 2: Bản lưu mới nhất trên Cloud (để Minh Hạnh vào link gốc cũng thấy ngay)
+   */
+  async function loadLatestLetterContent() {
+    const params = new URLSearchParams(window.location.search);
+    const encodedThu = params.get("thu");
+    if (encodedThu) {
+      const decoded = decodeLetterFromBase64(encodedThu);
+      if (decoded) {
+        applyLetterData(decoded);
         return;
       }
-      const data = JSON.parse(raw);
-      editableIds.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el && typeof data[id] === "string") {
-          el.innerHTML = data[id];
-        }
-      });
-    } catch (e) {
-      // Ignore malformed storage
     }
-    updateWordCount();
+
+    try {
+      const res = await fetch(`https://ntfy.sh/${CLOUD_LETTER_TOPIC}/json?poll=1`);
+      if (res.ok) {
+        const text = await res.text();
+        const lines = text.trim().split("\n").filter(Boolean);
+        let latestPayload = null;
+        for (const line of lines) {
+          try {
+            const item = JSON.parse(line);
+            if (item && item.event === "message" && item.message) {
+              const parsed = JSON.parse(item.message);
+              if (parsed && parsed.letterData) {
+                latestPayload = parsed.letterData;
+              }
+            }
+          } catch (_) {
+            // Ignore non-JSON lines
+          }
+        }
+        if (latestPayload) {
+          applyLetterData(latestPayload);
+          return;
+        }
+      }
+    } catch (_) {
+      // Nếu ngoại tuyến, thử đọc từ localStorage
+    }
+
+    try {
+      const localRaw = localStorage.getItem(STORAGE_KEY);
+      if (localRaw) {
+        applyLetterData(JSON.parse(localRaw));
+      }
+    } catch (_) {
+      // Ignore
+    }
   }
 
-  editableIds.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.setAttribute("contenteditable", "false");
-    }
-  });
-
-  // Chuyển đổi giữa chế độ Viết thư và chế độ Xem như Minh Hạnh
-  function setReadOnlyMode(isReadOnly) {
-    document.body.classList.toggle("read-only-mode", isReadOnly);
+  /**
+   * Bật / Tắt chế độ Viết & Quản lý thư dành cho Vũ Dũng
+   */
+  function setAuthorWriteMode(enabled) {
+    document.body.classList.toggle("read-only-mode", !enabled);
+    document.body.classList.toggle("show-admin-panel", enabled);
     editableIds.forEach((id) => {
       const el = document.getElementById(id);
       if (el) {
-        el.setAttribute("contenteditable", isReadOnly ? "false" : "true");
+        el.setAttribute("contenteditable", enabled ? "true" : "false");
       }
     });
-    if (btnToggleMode) {
-      btnToggleMode.textContent = isReadOnly ? "✍️ Chỉnh sửa thư" : "👁️ Xem như Minh Hạnh";
-      btnToggleMode.classList.toggle("active", isReadOnly);
+    if (enabled) {
+      loadAuthorInbox();
+      startLiveNotificationStream();
     }
   }
 
-  if (btnToggleMode) {
-    btnToggleMode.addEventListener("click", () => {
-      const currentlyReadOnly = document.body.classList.contains("read-only-mode");
-      setReadOnlyMode(!currentlyReadOnly);
-    });
+  // Kiểm tra nếu Vũ Dũng mở link với ?viet=1 hoặc ?hopthu=1 hoặc ?edit=1
+  const urlParams = new URLSearchParams(window.location.search);
+  if (
+    urlParams.has("viet") ||
+    urlParams.has("hopthu") ||
+    urlParams.has("edit") ||
+    urlParams.has("admin")
+  ) {
+    setAuthorWriteMode(true);
   }
 
-  if (btnClearLetter) {
-    btnClearLetter.addEventListener("click", () => {
-      const bodyEl = document.getElementById("letterBody");
-      if (bodyEl) {
-        bodyEl.innerHTML = "<p>Hãy bắt đầu viết những dòng tâm sự gửi Minh Hạnh tại đây...</p>";
-        bodyEl.focus();
-        saveLetterToStorage();
+  // Cho phép Vũ Dũng bấm 3 lần liên tiếp vào Con Tem góc phải thư để mở nhanh chế độ Viết/Sửa thư
+  let stampClickCount = 0;
+  let stampClickTimer = null;
+  if (vintageStampBox) {
+    vintageStampBox.style.cursor = "pointer";
+    vintageStampBox.addEventListener("click", () => {
+      stampClickCount++;
+      clearTimeout(stampClickTimer);
+      if (stampClickCount >= 3) {
+        stampClickCount = 0;
+        const isCurrentlyReadOnly = document.body.classList.contains("read-only-mode");
+        setAuthorWriteMode(isCurrentlyReadOnly);
+      } else {
+        stampClickTimer = setTimeout(() => {
+          stampClickCount = 0;
+        }, 900);
       }
     });
   }
 
-  // --------------------------------------------------------------------------
-  // 5. TÙY CHỈNH GIAO DIỆN ĐỌC (Màu nền giấy, Font chữ, Cỡ chữ, Dòng kẻ)
-  // --------------------------------------------------------------------------
-  const themeButtons = document.querySelectorAll("[data-set-theme]");
-  const fontSelector = document.getElementById("fontSelector");
-  const btnFontDec = document.getElementById("btnFontDec");
-  const btnFontInc = document.getElementById("btnFontInc");
-  const btnToggleLines = document.getElementById("btnToggleLines");
-  const letterBodyContainer = document.getElementById("letterBodyContainer");
-
-  let currentFontSizeRem = 1.15;
-
-  function applyFontSize(rem) {
-    currentFontSizeRem = Math.min(1.6, Math.max(0.95, Number(rem.toFixed(2))));
-    const lineHeightRem = Number((currentFontSizeRem * 1.82).toFixed(2));
-    document.documentElement.style.setProperty("--letter-font-size", `${currentFontSizeRem}rem`);
-    document.documentElement.style.setProperty("--letter-line-height", `${lineHeightRem}rem`);
-  }
-
-  themeButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const theme = btn.getAttribute("data-set-theme");
-      document.body.setAttribute("data-theme", theme);
-      themeButtons.forEach((b) => b.classList.toggle("active", b === btn));
-    });
-  });
-
-  if (fontSelector) {
-    fontSelector.addEventListener("change", () => {
-      document.body.setAttribute("data-font", fontSelector.value);
+  if (btnLockView) {
+    btnLockView.addEventListener("click", () => {
+      setAuthorWriteMode(false);
     });
   }
 
-  if (btnFontDec) {
-    btnFontDec.addEventListener("click", () => applyFontSize(currentFontSizeRem - 0.08));
+  // Nút Lưu Thư Lên Link & Copy Link Gửi Minh Hạnh
+  if (btnSaveCloudLetter) {
+    btnSaveCloudLetter.addEventListener("click", async () => {
+      const letterData = getCurrentLetterData();
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(letterData));
+      } catch (_) {}
+
+      const originalText = btnSaveCloudLetter.textContent;
+      btnSaveCloudLetter.disabled = true;
+      btnSaveCloudLetter.textContent = "⏳ Đang lưu thư lên Link Web...";
+
+      let cloudSaved = false;
+      try {
+        const res = await fetch(`https://ntfy.sh/${CLOUD_LETTER_TOPIC}`, {
+          method: "POST",
+          body: JSON.stringify({
+            updatedAt: new Date().toLocaleString("vi-VN"),
+            letterData: letterData
+          })
+        });
+        cloudSaved = res.ok;
+      } catch (_) {
+        cloudSaved = false;
+      }
+
+      const cleanBaseUrl = window.location.origin + window.location.pathname;
+      const encoded = encodeLetterToBase64(letterData);
+      const shareUrl = cloudSaved ? cleanBaseUrl : `${cleanBaseUrl}?thu=${encoded}`;
+
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast(
+          `<strong>✓ Đã lưu nội dung thư lên Link &amp; tự động Copy Link!</strong><br>` +
+          `Link gửi Minh Hạnh: <a href="${shareUrl}" target="_blank" style="color:inherit;font-weight:600;text-decoration:underline;">${shareUrl}</a>`
+        );
+      } catch (_) {
+        showToast(
+          `<strong>✓ Đã lưu nội dung thư lên Link thành công!</strong><br>` +
+          `Link gửi Minh Hạnh: <a href="${shareUrl}" target="_blank" style="color:inherit;font-weight:600;text-decoration:underline;">${shareUrl}</a>`
+        );
+      }
+
+      btnSaveCloudLetter.disabled = false;
+      btnSaveCloudLetter.textContent = originalText;
+    });
   }
 
-  if (btnFontInc) {
-    btnFontInc.addEventListener("click", () => applyFontSize(currentFontSizeRem + 0.08));
+  // --------------------------------------------------------------------------
+  // 5. HỘP THƯ LỜI NHẮN & THÔNG BÁO TRỰC TIẾP CHO VŨ DŨNG
+  // --------------------------------------------------------------------------
+  async function loadAuthorInbox() {
+    if (!authorInboxList) return;
+    try {
+      const res = await fetch(`https://ntfy.sh/${CLOUD_MSG_TOPIC}/json?poll=1`);
+      if (!res.ok) throw new Error("Fetch failed");
+      const text = await res.text();
+      const lines = text.trim().split("\n").filter(Boolean);
+      const messages = [];
+
+      for (const line of lines) {
+        try {
+          const item = JSON.parse(line);
+          if (item && item.event === "message" && item.message) {
+            try {
+              const parsed = JSON.parse(item.message);
+              if (parsed && parsed.message) {
+                messages.push({
+                  sender: parsed.sender || "Minh Hạnh",
+                  message: parsed.message,
+                  time: parsed.time || new Date(item.time * 1000).toLocaleString("vi-VN")
+                });
+              }
+            } catch (_) {
+              messages.push({
+                sender: "Minh Hạnh",
+                message: item.message,
+                time: new Date(item.time * 1000).toLocaleString("vi-VN")
+              });
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (messages.length === 0) {
+        authorInboxList.innerHTML =
+          `<div class="inbox-msg-item"><div class="inbox-msg-meta">Chưa có tin nhắn nào được gửi. Khi Minh Hạnh gửi lời nhắn ở cuối trang, nội dung sẽ hiện ngay tại đây và gửi về email ${TARGET_EMAIL}!</div></div>`;
+        return;
+      }
+
+      messages.reverse();
+      authorInboxList.innerHTML = messages
+        .map(
+          (m) => `
+          <div class="inbox-msg-item">
+            <div class="inbox-msg-meta">
+              <strong>💌 Người gửi: ${escapeHtml(m.sender)}</strong>
+              <span>🕒 ${escapeHtml(m.time)}</span>
+            </div>
+            <div class="inbox-msg-body">${escapeHtml(m.message)}</div>
+          </div>
+        `
+        )
+        .join("");
+    } catch (_) {
+      authorInboxList.innerHTML =
+        `<div class="inbox-msg-item"><div class="inbox-msg-meta">Không thể tải hộp thư lúc này. Hãy kiểm tra kết nối mạng.</div></div>`;
+    }
   }
 
-  if (btnToggleLines && letterBodyContainer) {
-    btnToggleLines.addEventListener("click", () => {
-      letterBodyContainer.classList.toggle("lined-paper");
-      btnToggleLines.classList.toggle(
-        "active",
-        letterBodyContainer.classList.contains("lined-paper")
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  let liveEventSource = null;
+  function startLiveNotificationStream() {
+    if (liveEventSource || typeof EventSource === "undefined") return;
+    try {
+      liveEventSource = new EventSource(`https://ntfy.sh/${CLOUD_MSG_TOPIC}/sse`);
+      liveEventSource.onmessage = (evt) => {
+        try {
+          const data = JSON.parse(evt.data);
+          if (data && data.event === "message" && data.message) {
+            loadAuthorInbox();
+            let msgText = data.message;
+            let sender = "Minh Hạnh";
+            try {
+              const parsed = JSON.parse(data.message);
+              if (parsed.message) msgText = parsed.message;
+              if (parsed.sender) sender = parsed.sender;
+            } catch (_) {}
+
+            showToast(
+              `🔔 <strong>Thông báo mới:</strong> ${escapeHtml(sender)} vừa gửi lời nhắn: "${escapeHtml(msgText)}"`
+            );
+
+            if ("Notification" in window && Notification.permission === "granted") {
+              new Notification(`💌 Tin nhắn mới từ ${sender}`, {
+                body: msgText
+              });
+            }
+          }
+        } catch (_) {}
+      };
+    } catch (_) {}
+  }
+
+  if (btnRefreshInbox) {
+    btnRefreshInbox.addEventListener("click", loadAuthorInbox);
+  }
+
+  if (btnEnablePushNotify) {
+    btnEnablePushNotify.addEventListener("click", async () => {
+      startLiveNotificationStream();
+      if ("Notification" in window) {
+        const perm = await Notification.requestPermission();
+        if (perm === "granted") {
+          showToast(
+            `🔔 <strong>Đã bật chuông thông báo trực tiếp trên trình duyệt!</strong><br>` +
+            `Khi Minh Hạnh gửi tin nhắn, máy của bạn sẽ hiện thông báo ngay lập tức (hoặc bạn có thể theo dõi tại <a href="https://ntfy.sh/${CLOUD_MSG_TOPIC}" target="_blank" style="color:inherit;font-weight:600;text-decoration:underline;">ntfy.sh/${CLOUD_MSG_TOPIC}</a>).`
+          );
+          return;
+        }
+      }
+      showToast(
+        `🔔 Bạn có thể mở trang nhận thông báo trực tiếp tại: ` +
+        `<a href="https://ntfy.sh/${CLOUD_MSG_TOPIC}" target="_blank" style="color:inherit;font-weight:600;text-decoration:underline;">https://ntfy.sh/${CLOUD_MSG_TOPIC}</a>`
       );
     });
   }
 
-  // --------------------------------------------------------------------------
-  // 6. XUẤT FILE WEB HOÀN CHỈNH ĐỂ GỬI CHO MINH HẠNH (1 File HTML Duy Nhất)
-  // --------------------------------------------------------------------------
-  if (btnExportLetter) {
-    btnExportLetter.addEventListener("click", async () => {
-      saveLetterToStorage();
+  if (btnTestEmailAlert) {
+    btnTestEmailAlert.addEventListener("click", async () => {
+      btnTestEmailAlert.disabled = true;
+      const orig = btnTestEmailAlert.textContent;
+      btnTestEmailAlert.textContent = "⏳ Đang gửi thử về Email...";
 
-      try {
-        let cssText = "";
-        try {
-          const cssRes = await fetch("styles.css");
-          if (cssRes.ok) cssText = await cssRes.text();
-        } catch (_) {
-          // Khi mở trực tiếp bằng file://, giữ nguyên link hoặc đọc từ styleSheets nếu có thể
-        }
+      const res = await sendNotificationAndEmail(
+        "Hệ thống Thư Gửi Minh Hạnh (Test)",
+        "Đây là tin nhắn kiểm tra thông báo gửi về email vudung2003071@gmail.com."
+      );
 
-        const jsText = `(${initThuGuiMinhHanh.toString()})();`;
-
-        const cloneDoc = document.documentElement.cloneNode(true);
-        const cloneBody = cloneDoc.querySelector("body");
-        cloneBody.classList.add("read-only-mode", "locked-export");
-
-        // Khóa chỉnh sửa nội dung bức thư trên bản gửi cho Minh Hạnh
-        editableIds.forEach((id) => {
-          const el = cloneDoc.querySelector(`#${id}`);
-          if (el) el.setAttribute("contenteditable", "false");
-        });
-
-        // Ẩn nút chuyển chế độ viết thư và thanh công cụ viết thư
-        const modeBtn = cloneDoc.querySelector("#btnToggleMode");
-        if (modeBtn) modeBtn.remove();
-        const writerBar = cloneDoc.querySelector("#writerToolbar");
-        if (writerBar) writerBar.remove();
-
-        // Nhúng trực tiếp CSS và JS vào file HTML độc lập
-        const linkEl = cloneDoc.querySelector('link[href="styles.css"]');
-        const hasEmbeddedStyle = cloneDoc.querySelector("#embeddedStyles");
-        if (linkEl) {
-          if (hasEmbeddedStyle) {
-            linkEl.remove();
-          } else if (cssText) {
-            const styleEl = document.createElement("style");
-            styleEl.textContent = cssText;
-            linkEl.replaceWith(styleEl);
-          }
-        }
-
-        const scriptEl = cloneDoc.querySelector('script[src="script.js"]');
-        if (scriptEl) {
-          const inlineScript = document.createElement("script");
-          inlineScript.textContent = jsText;
-          scriptEl.replaceWith(inlineScript);
-        }
-
-        const finalHtml = "<!DOCTYPE html>\n" + cloneDoc.outerHTML;
-
-        // Nếu đang chạy qua server cục bộ, tự động lưu luôn file Thu_Gui_Minh_Hanh.html vào thư mục dự án
-        try {
-          await fetch("/api/save-export", {
-            method: "POST",
-            headers: { "Content-Type": "text/html;charset=utf-8" },
-            body: finalHtml
-          });
-        } catch (_) {
-          // Bỏ qua nếu mở trực tiếp bằng file://
-        }
-
-        const blob = new Blob([finalHtml], { type: "text/html;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "Thu_Gui_Minh_Hanh.html";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        alert("Bạn có thể nhấn Ctrl+S để lưu trang hoặc gửi trực tiếp thư mục web này!");
+      loadAuthorInbox();
+      if (res.emailOk) {
+        showToast(
+          `✅ <strong>Đã gửi email thông báo thành công về ${TARGET_EMAIL}!</strong> Bạn hãy mở hộp thư Gmail (kể cả mục Quảng cáo/Thư rác) để kiểm tra nhé.`
+        );
+      } else {
+        showToast(
+          `📬 <strong>Đã gửi yêu cầu kích hoạt tới ${TARGET_EMAIL}!</strong><br>` +
+          `Lần đầu tiên dùng trên link GitHub, bạn hãy mở hộp thư <strong>${TARGET_EMAIL}</strong>, tìm email từ <strong>FormSubmit</strong> và bấm nút <strong>"Activate Form"</strong> (chỉ cần bấm 1 lần duy nhất). Đồng thời tin nhắn đã được lưu vào Hộp thư ngay bên dưới!`
+        );
       }
+
+      btnTestEmailAlert.disabled = false;
+      btnTestEmailAlert.textContent = orig;
     });
   }
 
   // Khởi tạo khi tải trang
-  loadLetterFromStorage();
+  loadLatestLetterContent();
   initCompanionBot();
 })();
