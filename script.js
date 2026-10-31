@@ -244,7 +244,7 @@
       e.preventDefault();
 
       const message = replyTextarea.value.trim();
-      const sender = (senderNameInput.value || "").trim() || "Minh Hạnh";
+      const sender = (senderNameInput && senderNameInput.value.trim()) || "Minh Hạnh";
 
       if (!message) {
         emailFeedbackBox.className = "email-feedback-box info";
@@ -388,7 +388,7 @@
   editableIds.forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
-      el.addEventListener("input", saveLetterToStorage);
+      el.setAttribute("contenteditable", "false");
     }
   });
 

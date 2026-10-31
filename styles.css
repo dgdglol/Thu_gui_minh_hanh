@@ -1021,7 +1021,7 @@ body[data-theme="night-warm"] .email-feedback-box.success {
   50% { transform: translateY(-5px); }
 }
 
-/* Chấm trạng thái trên Avatar Bot */
+/* Chấm trạng thái trên Avatar Bot (luôn xanh hoạt động) */
 .bot-presence-badge {
   position: absolute;
   bottom: 2px;
@@ -1029,13 +1029,14 @@ body[data-theme="night-warm"] .email-feedback-box.success {
   width: 13px;
   height: 13px;
   border-radius: 50%;
-  background: #B8A58E;
+  background: #4CAF50;
   border: 2px solid var(--paper-bg);
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
   transition: background-color 0.3s ease;
 }
 
 .bot-avatar-dock.speaking .bot-presence-badge {
-  background: #5B8C5A;
+  background: #4CAF50;
 }
 
 /* ==========================================================================
